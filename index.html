@@ -1,0 +1,2973 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CastFlow - 보조출연자 및 조연 배우 관리 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        zinc: {
+                            950: '#09090b',
+                            900: '#121214',
+                            800: '#1a1a1e',
+                            700: '#27272a',
+                            600: '#3f3f46',
+                            500: '#71717a',
+                            400: '#a1a1aa',
+                            300: '#d4d4d8',
+                            200: '#e4e4e7',
+                            100: '#f4f4f5',
+                            50: '#fafafa',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Pretendard Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+    <!-- React and ReactDOM CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel for compiling JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e4e4e7;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f46;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d4d4d8;
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen transition-colors duration-300">
+    <div id="root"></div>
+
+    <!-- React App Implementation -->
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // Custom Inline SVG Icons to avoid loading delays or CDN dependencies
+        const Icons = {
+            Dashboard: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+                </svg>
+            ),
+            Users: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            ),
+            FileText: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            ),
+            Upload: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+            ),
+            Shield: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+            ),
+            Search: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            ),
+            Filter: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+            ),
+            Plus: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+            ),
+            Edit: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+            ),
+            Trash: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            ),
+            Close: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            ),
+            Sun: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+                </svg>
+            ),
+            Moon: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            ),
+            CheckCircle: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            Clock: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            AlertCircle: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+            Eye: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            ),
+            EyeOff: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                </svg>
+            ),
+            ChevronLeft: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            ),
+            ChevronRight: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+            ),
+            Check: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            ),
+            Lock: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+            ),
+            Download: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            ),
+            Refresh: ({ className }) => (
+                <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18" />
+                </svg>
+            )
+        };
+
+        // Static Lists for Generative Mock Data
+        const SURNAMES = ["김", "이", "박", "최", "정", "강", "조", "윤", "장", "임", "한", "오", "서", "신", "권", "황", "안", "송", "전", "홍"];
+        const GIVEN_NAMES_MALE = ["민준", "서준", "예준", "도윤", "시우", "주원", "하준", "지호", "준우", "현우", "건우", "우진", "민재", "현준", "준서", "유준", "성현", "은우", "태윤", "지환"];
+        const GIVEN_NAMES_FEMALE = ["서연", "서현", "민서", "하은", "지우", "지민", "윤아", "지원", "채원", "서아", "다은", "예은", "수아", "지아", "예린", "소율", "지원", "유나", "시아", "하윤"];
+        const SKILLS_LIST = [
+            "영어 회화", "일본어 회화", "중국어 회화", "경상도 사투리", "전라도 사투리", "충청도 사투리", "북한 사투리",
+            "승마", "태권도 3단", "검도", "현대무용", "발레", "기타 연주", "피아노 연주", "드럼 연주",
+            "아크로바틱", "스쿠버다이빙", "오토바이 면허", "대형면허 운전", "복싱", "와이어 액션"
+        ];
+        const BODY_TYPES = ["마름", "슬림 근육질", "보통", "탄탄함", "건장함", "통통함"];
+        const PROJECTS_LIST = ["프로젝트 서울", "광화문 연가", "조선 퇴마록", "한강 블루스", "비밀의 숲 3", "청담동 스캔들", "부산행 2"];
+        const ROLES_LIST = ["행인", "경찰관", "카페 손님", "마약상 부하", "조선 백성", "회사원", "지하철 승객", "시위대", "의사", "조직원", "보좌관", "구조 대원"];
+        const FILMOGRAPHY_EXAMPLES = [
+            "오징어 게임", "기생충", "범죄도시 4", "괴물", "극한직업", "신과함께", "명량", "국제시장", "부산행", "베테랑", "더 글로리", "카지노", "무빙"
+        ];
+
+        // Seeded random helper for reproducible lists
+        const seedRandom = (seed) => {
+            const x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        };
+
+        // Generates detailed profiles
+        const generateMockActor = (id, seed = id) => {
+            const isMale = seedRandom(seed + 1) > 0.48;
+            const surname = SURNAMES[Math.floor(seedRandom(seed + 2) * SURNAMES.length)];
+            const givenNameList = isMale ? GIVEN_NAMES_MALE : GIVEN_NAMES_FEMALE;
+            const givenName = givenNameList[Math.floor(seedRandom(seed + 3) * givenNameList.length)];
+            const name = `${surname}${givenName}`;
+            
+            // Age distribution from 18 to 68
+            const age = Math.floor(seedRandom(seed + 4) * 50) + 18;
+            const currentYear = new Date().getFullYear();
+            const birthYear = currentYear - age;
+            const birthMonth = String(Math.floor(seedRandom(seed + 5) * 12) + 1).padStart(2, '0');
+            const birthDay = String(Math.floor(seedRandom(seed + 6) * 28) + 1).padStart(2, '0');
+            const dob = `${birthYear}-${birthMonth}-${birthDay}`;
+
+            const height = isMale 
+                ? Math.floor(seedRandom(seed + 7) * 25) + 168  // 168 ~ 192 cm
+                : Math.floor(seedRandom(seed + 7) * 22) + 155; // 155 ~ 176 cm
+            
+            const weight = isMale
+                ? Math.floor(seedRandom(seed + 8) * 35) + 62   // 62 ~ 96 kg
+                : Math.floor(seedRandom(seed + 8) * 25) + 45;  // 45 ~ 69 kg
+
+            const bodyType = BODY_TYPES[Math.floor(seedRandom(seed + 9) * BODY_TYPES.length)];
+            
+            // Randomly select 1 to 3 special skills
+            const skillsCount = Math.floor(seedRandom(seed + 10) * 3) + 1;
+            const skills = [];
+            const tempSkills = [...SKILLS_LIST];
+            for (let i = 0; i < skillsCount; i++) {
+                const index = Math.floor(seedRandom(seed + 11 + i) * tempSkills.length);
+                skills.push(tempSkills[index]);
+                tempSkills.splice(index, 1);
+            }
+
+            const phone = `010-${String(Math.floor(seedRandom(seed + 12) * 9000) + 1000)}-${String(Math.floor(seedRandom(seed + 13) * 9000) + 1000)}`;
+            const email = `${givenName.toLowerCase()}${birthYear % 100}@mail.com`;
+            const sns = `@${givenName.toLowerCase()}_official`;
+
+            // Filmography: 0 to 4 items
+            const filmCount = Math.floor(seedRandom(seed + 14) * 5);
+            const filmography = [];
+            const tempFilms = [...FILMOGRAPHY_EXAMPLES];
+            for(let i=0; i<filmCount; i++){
+                const index = Math.floor(seedRandom(seed + 15 + i) * tempFilms.length);
+                filmography.push(tempFilms[index]);
+                tempFilms.splice(index, 1);
+            }
+
+            // Collaboration history
+            const collabCount = Math.floor(seedRandom(seed + 16) * 4);
+            const collabHistory = [];
+            for (let i = 0; i < collabCount; i++) {
+                const project = PROJECTS_LIST[Math.floor(seedRandom(seed + 17 + i) * PROJECTS_LIST.length)];
+                const role = ROLES_LIST[Math.floor(seedRandom(seed + 18 + i) * ROLES_LIST.length)];
+                collabHistory.push({ project, role, date: `${currentYear - 1 - i}-0${i + 1}-15` });
+            }
+
+            // Profile photo placeholder
+            const photoUrl = isMale 
+                ? `https://images.unsplash.com/photo-${[
+                    '1500648767791-00dcc994a43e', '1507003211169-0a1dd7228f2d', '1539571696357-5a69c17a67c6',
+                    '1492562080023-ab3db95bfbce', '1506794778202-cad84cf45f1d', '1519085360753-af0119f7cbe7'
+                  ][id % 6]}?w=150&h=150&fit=crop&crop=faces`
+                : `https://images.unsplash.com/photo-${[
+                    '1494790108377-be9c29b29330', '1438761681033-6461ffad8d80', '1544005313-94ddf0286df2',
+                    '1534528741775-53994a69daeb', '1517841905240-472988babdf9', '1554151228-14d9def656e4'
+                  ][id % 6]}?w=150&h=150&fit=crop&crop=faces`;
+
+            return {
+                id: `ACT-${String(id).padStart(5, '0')}`,
+                numericId: id,
+                name,
+                isMale,
+                gender: isMale ? "남성" : "여성",
+                dob,
+                age,
+                phone,
+                email,
+                sns,
+                photoUrl,
+                height,
+                weight,
+                bodyType,
+                skills,
+                filmography,
+                collabHistory,
+                ndaSigned: seedRandom(seed + 19) > 0.4
+            };
+        };
+
+        // Generates 30 initial records
+        const INITIAL_ACTORS = Array.from({ length: 30 }, (_, i) => generateMockActor(i + 1));
+
+        // Initial NDAs linked to initial actors
+        const INITIAL_NDAS = [];
+        INITIAL_ACTORS.forEach((actor, index) => {
+            if (actor.ndaSigned) {
+                const project = PROJECTS_LIST[index % PROJECTS_LIST.length];
+                INITIAL_NDAS.push({
+                    id: `NDA-${String(100 + index).padStart(5, '0')}`,
+                    actorId: actor.id,
+                    actorName: actor.name,
+                    projectName: project,
+                    status: 'signed',
+                    sentDate: '2026-05-10',
+                    signedDate: '2026-05-12',
+                    hash: 'sha256-' + Math.random().toString(16).substring(2, 10).toUpperCase() + '...'
+                });
+            } else if (index % 4 === 0) {
+                const project = PROJECTS_LIST[index % PROJECTS_LIST.length];
+                INITIAL_NDAS.push({
+                    id: `NDA-${String(100 + index).padStart(5, '0')}`,
+                    actorId: actor.id,
+                    actorName: actor.name,
+                    projectName: project,
+                    status: 'sent',
+                    sentDate: '2026-06-25',
+                    signedDate: '',
+                    hash: ''
+                });
+            }
+        });
+
+        // App Component
+        function App() {
+            const [theme, setTheme] = useState('dark');
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [actors, setActors] = useState(INITIAL_ACTORS);
+            const [ndas, setNdas] = useState(INITIAL_NDAS);
+            const [projects, setProjects] = useState(PROJECTS_LIST);
+
+            const handleAddProject = (newProj) => {
+                if (!newProj || !newProj.trim()) return false;
+                const trimmed = newProj.trim();
+                if (projects.includes(trimmed)) {
+                    alert("이미 존재하는 작품명입니다.");
+                    return false;
+                }
+                setProjects(prev => [...prev, trimmed]);
+                addLog('작품 등록', `새로운 작품 [${trimmed}]을 시스템에 직접 등록했습니다.`);
+                return trimmed;
+            };
+            const [logs, setLogs] = useState([
+                { id: 1, time: '13:40:02', user: '관리자(Admin)', type: '로그인', desc: '관리자 대시보드 로그인 성공' },
+                { id: 2, time: '13:42:15', user: '관리자(Admin)', type: '보안', desc: '배우 데이터베이스 암호화 채널 로드' }
+            ]);
+
+            // Detailed Panel State
+            const [selectedActorId, setSelectedActorId] = useState(null);
+            const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+            // Modals
+            const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+            const [actorToEdit, setActorToEdit] = useState(null);
+
+            // Decryption state for sensitive data
+            const [decryptedFields, setDecryptedFields] = useState({});
+
+            // Theme toggle execution
+            useEffect(() => {
+                const root = window.document.documentElement;
+                if (theme === 'dark') {
+                    root.classList.add('dark');
+                } else {
+                    root.classList.remove('dark');
+                }
+            }, [theme]);
+
+            // Add Security Log Helper
+            const addLog = (type, desc) => {
+                const now = new Date();
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                setLogs(prev => [
+                    { id: Date.now(), time: timeStr, user: '관리자(Admin)', type, desc },
+                    ...prev.slice(0, 49) // Keep last 50 logs
+                ]);
+            };
+
+            const toggleTheme = () => {
+                const nextTheme = theme === 'dark' ? 'light' : 'dark';
+                setTheme(nextTheme);
+                addLog('환경설정', `UI 테마 변경: ${nextTheme === 'dark' ? '다크 모드' : '라이트 모드'}`);
+            };
+
+            const handleActorClick = (id) => {
+                setSelectedActorId(id);
+                setIsDetailOpen(true);
+            };
+
+            // Masked data view toggle
+            const revealSensitiveData = (actorId, field) => {
+                const key = `${actorId}-${field}`;
+                setDecryptedFields(prev => ({
+                    ...prev,
+                    [key]: !prev[key]
+                }));
+                if (!decryptedFields[key]) {
+                    const actorName = actors.find(a => a.id === actorId)?.name || actorId;
+                    addLog('개인정보 접근', `배우 [${actorName}]의 민감정보(${field === 'phone' ? '연락처' : '이메일'})를 조회했습니다.`);
+                }
+            };
+
+            return (
+                <div className="flex h-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans transition-colors duration-300">
+                    
+                    {/* Left Sidebar Navigation */}
+                    <aside className="w-64 flex-shrink-0 bg-white dark:bg-[#0c0c0f] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between z-20">
+                        <div>
+                            {/* Logo Row */}
+                            <div className="h-16 px-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
+                                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                                    <Icons.Shield className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h1 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50">CastFlow</h1>
+                                    <p className="text-xs text-zinc-500">배우 및 NDA 보안 관리</p>
+                                </div>
+                            </div>
+
+                            {/* Nav List */}
+                            <nav className="p-4 space-y-1">
+                                <button
+                                    onClick={() => { setActiveTab('dashboard'); setIsDetailOpen(false); }}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'dashboard'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                                    }`}
+                                >
+                                    <Icons.Dashboard className="w-5 h-5" />
+                                    대시보드
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('actors')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'actors'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                                    }`}
+                                >
+                                    <Icons.Users className="w-5 h-5" />
+                                    배우 데이터베이스
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('nda')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'nda'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                                    }`}
+                                >
+                                    <Icons.FileText className="w-5 h-5" />
+                                    NDA 및 보안 서약
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('import')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'import'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                                    }`}
+                                >
+                                    <Icons.Upload className="w-5 h-5" />
+                                    일괄 등록 (CSV)
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('security')}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'security'
+                                            ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                                            : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900'
+                                    }`}
+                                >
+                                    <Icons.Shield className="w-5 h-5" />
+                                    보안 감사 로그
+                                </button>
+                            </nav>
+                        </div>
+
+                        {/* Sidebar Bottom */}
+                        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                                    관
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-200">김관리 (마스터)</h4>
+                                    <p className="text-[10px] text-zinc-500">GCP 보안 채널 접속 중</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={toggleTheme}
+                                    className="flex-1 py-1.5 px-3 bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-md text-xs font-medium flex items-center justify-center gap-2 border border-zinc-200 dark:border-zinc-800 transition-colors"
+                                >
+                                    {theme === 'dark' ? (
+                                        <>
+                                            <Icons.Sun className="w-3.5 h-3.5 text-amber-500" />
+                                            라이트 모드
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icons.Moon className="w-3.5 h-3.5 text-indigo-500" />
+                                            다크 모드
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* Main Container */}
+                    <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                        {/* Top Bar */}
+                        <header className="h-16 bg-white dark:bg-[#0c0c0f] border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between px-6 z-10">
+                            <div>
+                                <span className="text-xs font-semibold px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-500/20">
+                                    보안 채널 활성화
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs text-zinc-500">
+                                    최종 시스템 업데이트: <span className="font-mono">2026-06-30 13:45</span>
+                                </div>
+                                <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
+                                <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                    보조출연 에이전시 전용
+                                </span>
+                            </div>
+                        </header>
+
+                        {/* Content Area */}
+                        <main className="flex-1 overflow-y-auto p-6">
+                            {activeTab === 'dashboard' && (
+                                <DashboardView 
+                                    actors={actors} 
+                                    ndas={ndas} 
+                                    projects={projects} 
+                                    setActiveTab={setActiveTab} 
+                                    setActors={setActors}
+                                    addLog={addLog}
+                                />
+                            )}
+                            {activeTab === 'actors' && (
+                                <ActorsView 
+                                    actors={actors} 
+                                    setActors={setActors}
+                                    ndas={ndas}
+                                    setNdas={setNdas}
+                                    onActorClick={handleActorClick} 
+                                    setIsAddModalOpen={setIsAddModalOpen}
+                                    setIsEditModalOpen={setIsEditModalOpen}
+                                    setActorToEdit={setActorToEdit}
+                                    revealSensitiveData={revealSensitiveData}
+                                    decryptedFields={decryptedFields}
+                                    addLog={addLog}
+                                    projects={projects}
+                                    onAddProject={handleAddProject}
+                                />
+                            )}
+                            {activeTab === 'nda' && (
+                                <NdaView 
+                                    ndas={ndas} 
+                                    setNdas={setNdas}
+                                    actors={actors}
+                                    setActors={setActors}
+                                    projects={projects}
+                                    setProjects={setProjects}
+                                    addLog={addLog}
+                                />
+                            )}
+                            {activeTab === 'import' && (
+                                <ImportView 
+                                    setActors={setActors} 
+                                    addLog={addLog}
+                                />
+                            )}
+                            {activeTab === 'security' && (
+                                <SecurityView 
+                                    logs={logs} 
+                                    addLog={addLog}
+                                />
+                            )}
+                        </main>
+
+                        {/* Actor Detail Drawer Side Panel */}
+                        <ActorDetailPanel 
+                            isOpen={isDetailOpen} 
+                            onClose={() => setIsDetailOpen(false)} 
+                            actorId={selectedActorId} 
+                            actors={actors}
+                            setActors={setActors}
+                            ndas={ndas}
+                            setNdas={setNdas}
+                            revealSensitiveData={revealSensitiveData}
+                            decryptedFields={decryptedFields}
+                            projects={projects}
+                            setProjects={setProjects}
+                            addLog={addLog}
+                        />
+                    </div>
+
+                    {/* Manual CRUD Modals */}
+                    {isAddModalOpen && (
+                        <ActorFormModal 
+                            onClose={() => setIsAddModalOpen(false)} 
+                            onSave={(newActor) => {
+                                setActors(prev => [newActor, ...prev]);
+                                addLog('배우 등록', `새 배우 [${newActor.name}] 프로필이 생성되었습니다.`);
+                                setIsAddModalOpen(false);
+                            }}
+                            projects={projects}
+                        />
+                    )}
+
+                    {isEditModalOpen && (
+                        <ActorFormModal 
+                            actor={actorToEdit}
+                            onClose={() => {
+                                setIsEditModalOpen(false);
+                                setActorToEdit(null);
+                            }} 
+                            onSave={(updatedActor) => {
+                                setActors(prev => prev.map(a => a.id === updatedActor.id ? updatedActor : a));
+                                addLog('배우 수정', `배우 [${updatedActor.name}] 프로필 정보를 업데이트했습니다.`);
+                                setIsEditModalOpen(false);
+                                setActorToEdit(null);
+                            }}
+                            projects={projects}
+                        />
+                    )}
+
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: DashboardView
+        // ==========================================
+        function DashboardView({ actors, ndas, projects, setActiveTab, setActors, addLog }) {
+            const stats = useMemo(() => {
+                const total = actors.length;
+                const totalHeight = actors.reduce((acc, a) => acc + a.height, 0);
+                const avgHeight = total > 0 ? (totalHeight / total).toFixed(1) : 0;
+                
+                const totalAge = actors.reduce((acc, a) => acc + a.age, 0);
+                const avgAge = total > 0 ? (totalAge / total).toFixed(1) : 0;
+
+                const signedNdaCount = actors.filter(a => a.ndaSigned).length;
+                const ndaRate = total > 0 ? ((signedNdaCount / total) * 100).toFixed(1) : 0;
+
+                return { total, avgHeight, avgAge, ndaRate, signedNdaCount };
+            }, [actors]);
+
+            // Skills statistics
+            const skillStats = useMemo(() => {
+                const counts = {};
+                actors.forEach(actor => {
+                    actor.skills.forEach(skill => {
+                        counts[skill] = (counts[skill] || 0) + 1;
+                    });
+                });
+                return Object.entries(counts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+            }, [actors]);
+
+            // Age brackets
+            const ageBrackets = useMemo(() => {
+                let brackets = { '10~20대': 0, '30대': 0, '40대': 0, '50대 이상': 0 };
+                actors.forEach(actor => {
+                    if (actor.age < 30) brackets['10~20대']++;
+                    else if (actor.age < 40) brackets['30대']++;
+                    else if (actor.age < 50) brackets['40대']++;
+                    else brackets['50대 이상']++;
+                });
+                return brackets;
+            }, [actors]);
+
+            const loadBulkData = () => {
+                // Generates 1,200 mock actors for test
+                const bigBatch = Array.from({ length: 1200 }, (_, i) => generateMockActor(i + 100));
+                setActors(prev => {
+                    const existingNonMock = prev.filter(a => parseInt(a.id.replace('ACT-', '')) < 100);
+                    return [...existingNonMock, ...bigBatch];
+                });
+
+                // Generate random NDAs for the new batch
+                const newNdas = [];
+                bigBatch.forEach((actor, index) => {
+                    if (actor.ndaSigned) {
+                        const project = projects[index % projects.length];
+                        newNdas.push({
+                            id: `NDA-${String(500 + index).padStart(5, '0')}`,
+                            actorId: actor.id,
+                            actorName: actor.name,
+                            projectName: project,
+                            status: 'signed',
+                            sentDate: '2026-06-01',
+                            signedDate: '2026-06-03',
+                            hash: 'sha256-' + Math.random().toString(16).substring(2, 10).toUpperCase() + '...'
+                        });
+                    }
+                });
+                
+                addLog('데이터 일괄 로드', '대용량 시뮬레이션용 데이터 1,200건을 데이터베이스에 적재 완료했습니다.');
+            };
+
+            return (
+                <div className="space-y-6">
+                    {/* Header Action */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">시스템 대시보드</h2>
+                            <p className="text-zinc-500 text-sm">보조출연자 데이터베이스 상태 및 보안 규정 준수 현황</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={loadBulkData}
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+                            >
+                                <Icons.Refresh className="w-4 h-4" />
+                                1,200명 대용량 테스트 데이터 탑재
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* KPI Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">등록된 총 배우 수</span>
+                                <span className="p-2 bg-blue-500/10 text-blue-600 rounded-lg">
+                                    <Icons.Users className="w-5 h-5" />
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h3 className="text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 font-mono">
+                                    {stats.total.toLocaleString()}명
+                                </h3>
+                                <p className="text-xs text-zinc-500 mt-1">에이전시 전체 풀 소속</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">NDA 서약 준수율</span>
+                                <span className="p-2 bg-emerald-500/10 text-emerald-600 rounded-lg">
+                                    <Icons.CheckCircle className="w-5 h-5" />
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <div className="flex items-baseline gap-2">
+                                    <h3 className="text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 font-mono">
+                                        {stats.ndaRate}%
+                                    </h3>
+                                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                        ({stats.signedNdaCount}명 서명 완료)
+                                    </span>
+                                </div>
+                                <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                                    <div className="bg-emerald-500 h-1.5" style={{ width: `${stats.ndaRate}%` }}></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">배우 평균 연령</span>
+                                <span className="p-2 bg-amber-500/10 text-amber-600 rounded-lg">
+                                    <Icons.Clock className="w-5 h-5" />
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h3 className="text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 font-mono">
+                                    {stats.avgAge}세
+                                </h3>
+                                <p className="text-xs text-zinc-500 mt-1">생년월일 실시간 환산 기준</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm">
+                            <div className="flex justify-between items-start">
+                                <span className="text-zinc-500 dark:text-zinc-400 text-sm font-medium">평균 신장 (Height)</span>
+                                <span className="p-2 bg-indigo-500/10 text-indigo-600 rounded-lg font-bold text-xs">
+                                    cm
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h3 className="text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 font-mono">
+                                    {stats.avgHeight} cm
+                                </h3>
+                                <p className="text-xs text-zinc-500 mt-1">의상 및 캐스팅 기본 지표</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Middle Charts & Data Panels */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        {/* Skill Top Lists */}
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-4">보유 배우 많은 특기 TOP 5</h3>
+                                <div className="space-y-3">
+                                    {skillStats.map(([skill, count], idx) => {
+                                        const percentage = ((count / actors.length) * 100).toFixed(1);
+                                        return (
+                                            <div key={skill} className="space-y-1">
+                                                <div className="flex justify-between text-xs font-semibold">
+                                                    <span>{idx + 1}. {skill}</span>
+                                                    <span className="text-zinc-500">{count}명 ({percentage}%)</span>
+                                                </div>
+                                                <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${percentage}%` }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setActiveTab('actors')}
+                                className="mt-4 text-xs font-semibold text-blue-500 hover:text-blue-600 hover:underline inline-flex items-center gap-1.5"
+                            >
+                                상세 필터링하여 찾기 <Icons.ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Age brackets bar chart */}
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-4">연령대별 배우 분포</h3>
+                                <div className="space-y-3">
+                                    {Object.entries(ageBrackets).map(([bracket, count]) => {
+                                        const percentage = ((count / actors.length) * 100).toFixed(1);
+                                        return (
+                                            <div key={bracket} className="flex items-center gap-3">
+                                                <span className="w-20 text-xs font-medium text-zinc-500">{bracket}</span>
+                                                <div className="flex-1 bg-zinc-100 dark:bg-zinc-800 h-5 rounded overflow-hidden relative">
+                                                    <div className="bg-indigo-500/20 dark:bg-indigo-500/30 h-full transition-all" style={{ width: `${percentage}%` }} />
+                                                    <span className="absolute inset-y-0 left-2 flex items-center text-[10px] font-bold font-mono text-indigo-700 dark:text-indigo-300">
+                                                        {count}명
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 w-10 text-right">{percentage}%</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <p className="text-[10px] text-zinc-500 mt-2">출연진 연령 조율 시 상기 분포를 참고하십시오.</p>
+                        </div>
+
+                        {/* Project NDA Compliance lists */}
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+                            <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 mb-4">프로젝트별 기밀서약(NDA) 체결율</h3>
+                            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                                {projects.map((project, idx) => {
+                                    // Calculate rate of signed ndas for this project
+                                    const projectNdas = ndas.filter(n => n.projectName === project);
+                                    const total = projectNdas.length;
+                                    const signed = projectNdas.filter(n => n.status === 'signed').length;
+                                    const rate = total > 0 ? ((signed / total) * 100).toFixed(0) : 100; // default 100 if no actor assigned
+                                    
+                                    let rateColor = "bg-emerald-500";
+                                    let textColor = "text-emerald-600 dark:text-emerald-400";
+                                    if (rate < 50) {
+                                        rateColor = "bg-rose-500";
+                                        textColor = "text-rose-600 dark:text-rose-400";
+                                    } else if (rate < 85) {
+                                        rateColor = "bg-amber-500";
+                                        textColor = "text-amber-600 dark:text-amber-400";
+                                    }
+
+                                    return (
+                                        <div key={project} className="flex justify-between items-center py-1.5 border-b border-zinc-100 dark:border-zinc-800 last:border-0">
+                                            <div className="min-w-0 flex-1 pr-3">
+                                                <p className="text-xs font-semibold truncate text-zinc-800 dark:text-zinc-200">{project}</p>
+                                                <p className="text-[10px] text-zinc-500">배정 인원: {total}명 / 서명 완료: {signed}명</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 bg-zinc-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                                                    <div className={`${rateColor} h-1.5`} style={{ width: `${rate}%` }} />
+                                                </div>
+                                                <span className={`text-xs font-bold font-mono ${textColor} w-10 text-right`}>{rate}%</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Notice card for system safety */}
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="flex gap-3">
+                            <span className="p-2 bg-blue-500/10 text-blue-600 rounded-lg flex-shrink-0">
+                                <Icons.Shield className="w-5 h-5" />
+                            </span>
+                            <div>
+                                <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300">개인정보 보호 관련 안내</h4>
+                                <p className="text-xs text-blue-600/90 dark:text-blue-400/90 mt-0.5">
+                                    본 시스템에 저장된 배우의 휴대전화번호, 이메일은 정보보호 규정에 따라 마스킹 처리되어 있습니다. 상세 보기 및 마스킹 해제는 감사 로그에 기록됩니다.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setActiveTab('security')}
+                            className="text-xs font-semibold bg-white dark:bg-zinc-900 border border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-300 px-3.5 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors shadow-xs"
+                        >
+                            감사로그 열람
+                        </button>
+                    </div>
+
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: ActorsView
+        // ==========================================
+        function ActorsView({ 
+            actors, 
+            setActors, 
+            ndas, 
+            setNdas, 
+            onActorClick, 
+            setIsAddModalOpen, 
+            setIsEditModalOpen, 
+            setActorToEdit,
+            revealSensitiveData,
+            decryptedFields,
+            addLog,
+            projects,
+            onAddProject
+        }) {
+            // View Mode State
+            const [viewMode, setViewMode] = useState('table'); // 'grid' or 'table'
+            
+            // Search / Filter / Pagination States
+            const [search, setSearch] = useState('');
+            const [genderFilter, setGenderFilter] = useState('');
+            const [bodyTypeFilter, setBodyTypeFilter] = useState('');
+            const [selectedSkills, setSelectedSkills] = useState([]);
+            const [heightRange, setHeightRange] = useState({ min: 140, max: 200 });
+            const [ageRange, setAgeRange] = useState({ min: 18, max: 70 });
+            const [ndaFilter, setNdaFilter] = useState(''); // 'signed', 'unsigned'
+
+            // Sorting
+            const [sortBy, setSortBy] = useState('name');
+            const [sortOrder, setSortOrder] = useState('asc');
+
+            // Pagination
+            const [currentPage, setCurrentPage] = useState(1);
+            const itemsPerPage = 15;
+
+            // Open filter panel toggler
+            const [showAdvFilters, setShowAdvFilters] = useState(false);
+
+            // NEW: Multiple Actor Selection & Project-Specific NDA Inspection
+            const [selectedActorIds, setSelectedActorIds] = useState([]);
+            const [batchNdaProject, setBatchNdaProject] = useState(projects[0]);
+            const [inspectProject, setInspectProject] = useState(projects[0]);
+
+            // Handle skill selection toggler
+            const handleSkillToggle = (skill) => {
+                setSelectedSkills(prev => 
+                    prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+                );
+            };
+
+            // Reset all filters
+            const resetFilters = () => {
+                setSearch('');
+                setGenderFilter('');
+                setBodyTypeFilter('');
+                setSelectedSkills([]);
+                setHeightRange({ min: 140, max: 200 });
+                setAgeRange({ min: 18, max: 70 });
+                setNdaFilter('');
+                setCurrentPage(1);
+                setSelectedActorIds([]);
+                setInspectProject(projects[0]);
+                addLog('필터 초기화', '검색 필터를 모두 기본값으로 리셋했습니다.');
+            };
+
+            // Filter and Sort calculation
+            const filteredActors = useMemo(() => {
+                let list = [...actors];
+
+                // 1. Text search
+                if (search.trim()) {
+                    const q = search.toLowerCase().trim();
+                    list = list.filter(actor => 
+                        actor.name.toLowerCase().includes(q) ||
+                        actor.skills.some(s => s.toLowerCase().includes(q)) ||
+                        actor.filmography.some(f => f.toLowerCase().includes(q)) ||
+                        actor.id.toLowerCase().includes(q)
+                    );
+                }
+
+                // 2. Gender filter
+                if (genderFilter) {
+                    list = list.filter(actor => actor.gender === genderFilter);
+                }
+
+                // 3. Body Type filter
+                if (bodyTypeFilter) {
+                    list = list.filter(actor => actor.bodyType === bodyTypeFilter);
+                }
+
+                // 4. Height range filter
+                list = list.filter(actor => actor.height >= heightRange.min && actor.height <= heightRange.max);
+
+                // 5. Age range filter
+                list = list.filter(actor => actor.age >= ageRange.min && actor.age <= ageRange.max);
+
+                // 6. Skills filter (all selected must be present)
+                if (selectedSkills.length > 0) {
+                    list = list.filter(actor => 
+                        selectedSkills.every(skill => actor.skills.includes(skill))
+                    );
+                }
+
+                // 7. NDA status filter for the inspected project
+                if (ndaFilter === 'signed') {
+                    list = list.filter(actor => {
+                        const ndaObj = ndas.find(n => n.actorId === actor.id && n.projectName === inspectProject);
+                        return ndaObj && ndaObj.status === 'signed';
+                    });
+                } else if (ndaFilter === 'unsigned') {
+                    list = list.filter(actor => {
+                        const ndaObj = ndas.find(n => n.actorId === actor.id && n.projectName === inspectProject);
+                        return !ndaObj || ndaObj.status !== 'signed';
+                    });
+                }
+
+                // 8. Sorting
+                list.sort((a, b) => {
+                    let valA, valB;
+                    if (sortBy === 'name') {
+                        valA = a.name;
+                        valB = b.name;
+                        return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    } else if (sortBy === 'height') {
+                        valA = a.height;
+                        valB = b.height;
+                    } else if (sortBy === 'age') {
+                        valA = a.age;
+                        valB = b.age;
+                    } else if (sortBy === 'collab') {
+                        valA = a.collabHistory.length;
+                        valB = b.collabHistory.length;
+                    }
+
+                    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                });
+
+                return list;
+            }, [actors, search, genderFilter, bodyTypeFilter, selectedSkills, heightRange, ageRange, ndaFilter, sortBy, sortOrder, inspectProject, ndas]);
+
+            // Pagination calculation
+            const paginatedActors = useMemo(() => {
+                const start = (currentPage - 1) * itemsPerPage;
+                return filteredActors.slice(start, start + itemsPerPage);
+            }, [filteredActors, currentPage]);
+
+            const totalPages = Math.ceil(filteredActors.length / itemsPerPage) || 1;
+
+            // Trigger reset of page and selections when filters change
+            useEffect(() => {
+                setCurrentPage(1);
+                setSelectedActorIds([]);
+            }, [search, genderFilter, bodyTypeFilter, selectedSkills, heightRange, ageRange, ndaFilter, sortBy, sortOrder, inspectProject]);
+
+            // CRUD delete handler
+            const handleDeleteActor = (id, name, e) => {
+                e.stopPropagation();
+                if (confirm(`[${name}] 배우를 데이터베이스에서 영구 삭제하시겠습니까? 관련 계약 및 협업 기록이 파기됩니다.`)) {
+                    setActors(prev => prev.filter(a => a.id !== id));
+                    setNdas(prev => prev.filter(n => n.actorId !== id));
+                    addLog('배우 삭제', `배우 [${name}]의 프로필이 완전 삭제되었습니다.`);
+                }
+            };
+
+            // Multi Send NDA Handler
+            const handleBatchNdaSendFromDatabase = () => {
+                const newNdaRecords = [];
+                const alreadySentNames = [];
+                
+                selectedActorIds.forEach(actorId => {
+                    const actorObj = actors.find(a => a.id === actorId);
+                    const exists = ndas.some(n => n.actorId === actorId && n.projectName === batchNdaProject);
+                    if (exists) {
+                        alreadySentNames.push(actorObj?.name || actorId);
+                    } else {
+                        newNdaRecords.push({
+                            id: `NDA-${String(Math.floor(Math.random() * 90000) + 10000)}`,
+                            actorId,
+                            actorName: actorObj?.name || '알수없음',
+                            projectName: batchNdaProject,
+                            status: 'sent',
+                            sentDate: new Date().toISOString().split('T')[0],
+                            signedDate: '',
+                            hash: ''
+                        });
+                    }
+                });
+
+                if (newNdaRecords.length > 0) {
+                    setNdas(prev => [...newNdaRecords, ...prev]);
+                    addLog('NDA 일괄 발송', `배우 데이터베이스에서 [${batchNdaProject}] 작품에 대하여 배우 ${newNdaRecords.length}명에게 NDA 서약서를 일괄 전송했습니다.`);
+                }
+
+                let alertMsg = `선택한 배우들에게 [${batchNdaProject}] 서약서 발송이 완료되었습니다.`;
+                if (alreadySentNames.length > 0) {
+                    alertMsg += `\n(이미 해당 작품 서약서가 생성된 배우 ${alreadySentNames.length}명 제외: ${alreadySentNames.join(', ')})`;
+                }
+                alert(alertMsg);
+                setSelectedActorIds([]);
+            };
+
+            return (
+                <div className="space-y-6">
+                    {/* Header Controls */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">배우 데이터베이스</h2>
+                            <p className="text-zinc-500 text-sm">에이전시 전체 풀 검색 및 상세 조건 프로필 관리</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm flex items-center gap-2"
+                            >
+                                <Icons.Plus className="w-4 h-4" />
+                                배우 신규 등록
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Search & Tool Bar */}
+                    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm space-y-4">
+                        <div className="flex flex-col lg:flex-row gap-3">
+                            {/* Text Input search */}
+                            <div className="relative flex-1">
+                                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-400">
+                                    <Icons.Search className="w-4 h-4" />
+                                </span>
+                                <input
+                                    type="text"
+                                    placeholder="이름, 특기, 출연 영화 등으로 통합 검색..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                />
+                            </div>
+
+                            {/* Easy quick filters */}
+                            <div className="flex flex-wrap gap-2 items-center">
+                                {/* inspect project selector */}
+                                <div className="flex items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5">
+                                    <span className="text-xs text-zinc-500 font-semibold whitespace-nowrap">서약 확인 작품:</span>
+                                    <select
+                                        value={inspectProject}
+                                        onChange={(e) => setInspectProject(e.target.value)}
+                                        className="bg-transparent text-xs font-bold text-blue-600 dark:text-blue-400 focus:outline-none cursor-pointer"
+                                    >
+                                        {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newProj = prompt("등록할 새로운 대상 작품명을 입력하세요:");
+                                            if (newProj && newProj.trim()) {
+                                                const res = onAddProject(newProj);
+                                                if (res) setInspectProject(res);
+                                            }
+                                        }}
+                                        className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 ml-1"
+                                        title="새 작품 직접 등록"
+                                    >
+                                        <Icons.Plus className="w-3 h-3" />
+                                    </button>
+                                </div>
+
+                                <select
+                                    value={genderFilter}
+                                    onChange={(e) => setGenderFilter(e.target.value)}
+                                    className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none"
+                                >
+                                    <option value="">성별 전체</option>
+                                    <option value="남성">남성</option>
+                                    <option value="여성">여성</option>
+                                </select>
+
+                                <select
+                                    value={ndaFilter}
+                                    onChange={(e) => setNdaFilter(e.target.value)}
+                                    className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none"
+                                >
+                                    <option value="">NDA 상태 전체</option>
+                                    <option value="signed">NDA 서명 완료</option>
+                                    <option value="unsigned">NDA 미서명/대기</option>
+                                </select>
+
+                                <button
+                                    onClick={() => setShowAdvFilters(!showAdvFilters)}
+                                    className={`px-3.5 py-2 rounded-lg text-sm font-semibold border transition-colors flex items-center gap-1.5 ${
+                                        showAdvFilters 
+                                            ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800 text-blue-600 dark:text-blue-400' 
+                                            : 'bg-zinc-50 border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                    }`}
+                                >
+                                    <Icons.Filter className="w-4 h-4" />
+                                    고급 필터
+                                    {selectedSkills.length > 0 && ` (${selectedSkills.length})`}
+                                </button>
+
+                                <button
+                                    onClick={resetFilters}
+                                    className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 text-xs font-semibold px-2 py-1"
+                                >
+                                    필터 초기화
+                                </button>
+                            </div>
+
+                            {/* View Switcher */}
+                            <div className="h-9 w-px bg-zinc-200 dark:bg-zinc-800 hidden lg:block" />
+
+                            <div className="flex bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-800 self-start sm:self-auto">
+                                <button
+                                    onClick={() => setViewMode('table')}
+                                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                                        viewMode === 'table'
+                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                                            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                                    }`}
+                                >
+                                    테이블 뷰
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
+                                        viewMode === 'grid'
+                                            ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                                            : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100'
+                                    }`}
+                                >
+                                    카드 그리드
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Collapsible Advanced Filters Section */}
+                        {showAdvFilters && (
+                            <div className="border-t border-zinc-100 dark:border-zinc-800 pt-4 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn">
+                                {/* Height Slider */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-zinc-500 block">신장 범위 (cm)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            value={heightRange.min}
+                                            onChange={(e) => setHeightRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                                            className="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs"
+                                            placeholder="최소"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={heightRange.max}
+                                            onChange={(e) => setHeightRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                                            className="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs"
+                                            placeholder="최대"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500">지정한 키 사이의 배우만 표시합니다.</p>
+                                </div>
+
+                                {/* Age Slider */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-zinc-500 block">나이 범위 (세)</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="number"
+                                            value={ageRange.min}
+                                            onChange={(e) => setAgeRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                                            className="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs"
+                                            placeholder="최소"
+                                        />
+                                        <input
+                                            type="number"
+                                            value={ageRange.max}
+                                            onChange={(e) => setAgeRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                                            className="w-1/2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs"
+                                            placeholder="최대"
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500">생년월일을 기준으로 환산된 나이 범위입니다.</p>
+                                </div>
+
+                                {/* Body Type select */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-zinc-500 block">체형</label>
+                                    <select
+                                        value={bodyTypeFilter}
+                                        onChange={(e) => setBodyTypeFilter(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1.5 text-xs focus:outline-none"
+                                    >
+                                        <option value="">체형 전체</option>
+                                        {BODY_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                </div>
+
+                                {/* Multi-select skill checkboxes (styled as pills) */}
+                                <div className="col-span-1 md:col-span-3 space-y-2">
+                                    <label className="text-xs font-semibold text-zinc-500 block">선택 특기 매칭 (다중 선택 시 교집합 필터)</label>
+                                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-lg">
+                                        {SKILLS_LIST.map(skill => {
+                                            const active = selectedSkills.includes(skill);
+                                            return (
+                                                <button
+                                                    key={skill}
+                                                    onClick={() => handleSkillToggle(skill)}
+                                                    className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                                                        active 
+                                                            ? 'bg-blue-600 border-blue-600 text-white shadow-xs' 
+                                                            : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300'
+                                                    }`}
+                                                >
+                                                    {skill}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Actors Listing */}
+                    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm flex flex-col">
+                        
+                        {/* Table Header Control Row (Sorting config) */}
+                        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-zinc-50/50 dark:bg-zinc-900/30">
+                            <span className="text-xs font-semibold text-zinc-500">
+                                검색된 인원: <span className="font-mono text-zinc-900 dark:text-zinc-100 font-bold">{filteredActors.length}</span>명
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <label className="text-xs text-zinc-500">정렬 기준:</label>
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value)}
+                                    className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs focus:outline-none"
+                                >
+                                    <option value="name">이름</option>
+                                    <option value="height">신장</option>
+                                    <option value="age">나이</option>
+                                    <option value="collab">협업 횟수</option>
+                                </select>
+                                <select
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value)}
+                                    className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded px-2 py-1 text-xs focus:outline-none"
+                                >
+                                    <option value="asc">오름차순 ⬆</option>
+                                    <option value="desc">내림차순 ⬇</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {filteredActors.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 px-4">
+                                <Icons.AlertCircle className="w-12 h-12 text-zinc-400 mb-3" />
+                                <h3 className="text-base font-bold text-zinc-700 dark:text-zinc-300">검색 조건에 부합하는 배우가 없습니다.</h3>
+                                <p className="text-zinc-500 text-xs mt-1">검색어를 수정하거나 필터를 완화해 보세요.</p>
+                            </div>
+                        ) : viewMode === 'table' ? (
+                            /* TABLE VIEW */
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-zinc-50 dark:bg-zinc-900/60 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800 text-xs">
+                                        <tr>
+                                            <th className="px-4 py-3.5 w-10 text-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={paginatedActors.length > 0 && paginatedActors.every(a => selectedActorIds.includes(a.id))}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            const pageIds = paginatedActors.map(a => a.id);
+                                                            setSelectedActorIds(prev => [...new Set([...prev, ...pageIds])]);
+                                                        } else {
+                                                            const pageIds = paginatedActors.map(a => a.id);
+                                                            setSelectedActorIds(prev => prev.filter(id => !pageIds.includes(id)));
+                                                        }
+                                                    }}
+                                                    className="rounded text-blue-600 focus:ring-blue-500 bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 w-4 h-4 cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="px-6 py-3.5">코드/이름</th>
+                                            <th className="px-6 py-3.5">인적 속성</th>
+                                            <th className="px-6 py-3.5">신체 스펙</th>
+                                            <th className="px-6 py-3.5">주요 특기</th>
+                                            <th className="px-6 py-3.5">민감 데이터 (보안)</th>
+                                            <th className="px-6 py-3.5 text-center">NDA 서약 ({inspectProject})</th>
+                                            <th className="px-6 py-3.5 text-right">관리</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                                        {paginatedActors.map(actor => {
+                                            const decryptedPhone = decryptedFields[`${actor.id}-phone`];
+                                            const decryptedEmail = decryptedFields[`${actor.id}-email`];
+                                            
+                                            // Check project specific NDA
+                                            const actorProjectNda = ndas.find(n => n.actorId === actor.id && n.projectName === inspectProject);
+
+                                            return (
+                                                <tr
+                                                    key={actor.id}
+                                                    onClick={() => onActorClick(actor.id)}
+                                                    className={`hover:bg-zinc-50 dark:hover:bg-zinc-900/40 cursor-pointer transition-colors ${
+                                                        selectedActorIds.includes(actor.id) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                                                    }`}
+                                                >
+                                                    <td className="px-4 py-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedActorIds.includes(actor.id)}
+                                                            onChange={() => {
+                                                                setSelectedActorIds(prev => 
+                                                                    prev.includes(actor.id) ? prev.filter(id => id !== actor.id) : [...prev, actor.id]
+                                                                );
+                                                            }}
+                                                            className="rounded text-blue-600 focus:ring-blue-500 bg-zinc-50 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700 w-4 h-4 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <img
+                                                                src={actor.photoUrl}
+                                                                alt={actor.name}
+                                                                className="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-800 object-cover bg-zinc-100"
+                                                                onError={(e) => {
+                                                                    e.target.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%232563eb'><rect width='100' height='100'/><text x='50' y='55' fill='white' font-size='30' font-family='sans-serif' text-anchor='middle'>${actor.name[0]}</text></svg>`;
+                                                                }}
+                                                            />
+                                                            <div>
+                                                                <p className="font-bold text-zinc-950 dark:text-zinc-50">{actor.name}</p>
+                                                                <p className="text-[10px] text-zinc-500 font-mono">{actor.id}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-xs space-y-0.5">
+                                                            <p><span className="text-zinc-500">성별:</span> {actor.gender}</p>
+                                                            <p><span className="text-zinc-500">나이:</span> {actor.age}세 ({actor.dob.split('-')[0]}년생)</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-xs space-y-0.5">
+                                                            <p><span className="text-zinc-500">키:</span> {actor.height}cm</p>
+                                                            <p><span className="text-zinc-500">체중/체형:</span> {actor.weight}kg / {actor.bodyType}</p>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-wrap gap-1 max-w-xs">
+                                                            {actor.skills.slice(0, 2).map(skill => (
+                                                                <span key={skill} className="bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                                                    {skill}
+                                                                </span>
+                                                            ))}
+                                                            {actor.skills.length > 2 && (
+                                                                <span className="text-[10px] text-zinc-400 self-center">
+                                                                    외 {actor.skills.length - 2}개
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-xs space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="flex items-center gap-2 font-mono">
+                                                                <span className="text-zinc-500 w-12 text-[10px]">연락처:</span>
+                                                                <span>
+                                                                    {decryptedPhone ? actor.phone : '010-••••-••••'}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => revealSensitiveData(actor.id, 'phone')}
+                                                                    className="p-1 bg-zinc-100 dark:bg-zinc-800 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                                                    title="조회 로그 기록"
+                                                                >
+                                                                    {decryptedPhone ? (
+                                                                        <Icons.EyeOff className="w-3.5 h-3.5 text-zinc-500" />
+                                                                    ) : (
+                                                                        <Icons.Eye className="w-3.5 h-3.5 text-blue-500" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                            <div className="flex items-center gap-2 font-mono">
+                                                                <span className="text-zinc-500 w-12 text-[10px]">이메일:</span>
+                                                                <span>
+                                                                    {decryptedEmail ? actor.email : '••••••••@mail.com'}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => revealSensitiveData(actor.id, 'email')}
+                                                                    className="p-1 bg-zinc-100 dark:bg-zinc-800 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                                                                    title="조회 로그 기록"
+                                                                >
+                                                                    {decryptedEmail ? (
+                                                                        <Icons.EyeOff className="w-3.5 h-3.5 text-zinc-500" />
+                                                                    ) : (
+                                                                        <Icons.Eye className="w-3.5 h-3.5 text-blue-500" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {actorProjectNda ? (
+                                                            actorProjectNda.status === 'signed' ? (
+                                                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full border border-emerald-500/20">
+                                                                    서명 완료
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full border border-amber-500/20">
+                                                                    서명 대기
+                                                                </span>
+                                                            )
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 bg-zinc-500/10 text-zinc-500 rounded-full border border-zinc-200 dark:border-zinc-800">
+                                                                미집행
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex justify-end gap-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setActorToEdit(actor);
+                                                                    setIsEditModalOpen(true);
+                                                                }}
+                                                                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-lg transition-colors"
+                                                                title="수정"
+                                                            >
+                                                                <Icons.Edit className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => handleDeleteActor(actor.id, actor.name, e)}
+                                                                className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 rounded-lg transition-colors"
+                                                                title="삭제"
+                                                            >
+                                                                <Icons.Trash className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            /* GRID CARD VIEW */
+                            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6">
+                                {paginatedActors.map(actor => {
+                                    const actorProjectNda = ndas.find(n => n.actorId === actor.id && n.projectName === inspectProject);
+                                    return (
+                                        <div
+                                            key={actor.id}
+                                            onClick={() => onActorClick(actor.id)}
+                                            className={`relative bg-zinc-50 dark:bg-zinc-900 border hover:border-zinc-300 dark:hover:border-zinc-700 rounded-xl p-4 cursor-pointer transition-all flex flex-col justify-between hover:shadow-md animate-fadeIn ${
+                                                selectedActorIds.includes(actor.id) ? 'border-blue-500 dark:border-blue-500/60 ring-1 ring-blue-500/30' : 'border-zinc-200 dark:border-zinc-800/80'
+                                            }`}
+                                        >
+                                            {/* Checkbox overlay absolute positioned */}
+                                            <div className="absolute top-3 left-3 z-10" onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedActorIds.includes(actor.id)}
+                                                    onChange={() => {
+                                                        setSelectedActorIds(prev => 
+                                                            prev.includes(actor.id) ? prev.filter(id => id !== actor.id) : [...prev, actor.id]
+                                                        );
+                                                    }}
+                                                    className="rounded text-blue-600 focus:ring-blue-500 bg-zinc-50 dark:bg-zinc-950 border-zinc-300 dark:border-zinc-700 w-4 h-4 cursor-pointer shadow-xs"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                {/* Photo & Basic Name info */}
+                                                <div className="flex gap-3 pl-5">
+                                                    <img
+                                                        src={actor.photoUrl}
+                                                        alt={actor.name}
+                                                        className="w-12 h-12 rounded-full border border-zinc-200 dark:border-zinc-800 object-cover bg-zinc-100 flex-shrink-0"
+                                                        onError={(e) => {
+                                                            e.target.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%232563eb'><rect width='100' height='100'/><text x='50' y='55' fill='white' font-size='30' font-family='sans-serif' text-anchor='middle'>${actor.name[0]}</text></svg>`;
+                                                        }}
+                                                    />
+                                                    <div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="font-bold text-sm text-zinc-950 dark:text-zinc-50">{actor.name}</span>
+                                                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                                                                actor.gender === '남성' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400'
+                                                            }`}>
+                                                                {actor.gender}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] text-zinc-500 font-mono mt-0.5">{actor.id}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bio specs */}
+                                                <div className="mt-3 text-xs grid grid-cols-2 gap-y-1 gap-x-2 bg-white dark:bg-zinc-950/60 p-2 rounded-lg border border-zinc-100 dark:border-zinc-800 pl-5">
+                                                    <p><span className="text-zinc-400">신장:</span> {actor.height}cm</p>
+                                                    <p><span className="text-zinc-400">체중:</span> {actor.weight}kg</p>
+                                                    <p className="col-span-2"><span className="text-zinc-400">체형:</span> {actor.bodyType}</p>
+                                                    <p className="col-span-2"><span className="text-zinc-400">나이:</span> {actor.age}세 ({actor.dob.split('-')[0]}년생)</p>
+                                                </div>
+
+                                                {/* Skills */}
+                                                <div className="mt-3 pl-5">
+                                                    <p className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">보유 특기</p>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {actor.skills.slice(0, 3).map(skill => (
+                                                            <span key={skill} className="bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                                                                {skill}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Bottom Sign indicator and action buttons */}
+                                            <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center" onClick={e => e.stopPropagation()}>
+                                                {actorProjectNda ? (
+                                                    actorProjectNda.status === 'signed' ? (
+                                                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                                                            ● NDA 체결
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-semibold text-amber-500 flex items-center gap-1">
+                                                            ▲ 서명 대기
+                                                        </span>
+                                                    )
+                                                ) : (
+                                                    <span className="text-[10px] font-semibold text-zinc-400 flex items-center gap-1">
+                                                        ○ NDA 미집행
+                                                    </span>
+                                                )}
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => {
+                                                            setActorToEdit(actor);
+                                                            setIsEditModalOpen(true);
+                                                        }}
+                                                        className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 rounded transition-colors"
+                                                    >
+                                                        <Icons.Edit className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDeleteActor(actor.id, actor.name, e)}
+                                                        className="p-1 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 rounded transition-colors"
+                                                    >
+                                                        <Icons.Trash className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Pagination Row */}
+                        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/30">
+                            <span className="text-xs text-zinc-500">
+                                전체 {filteredActors.length}명 중 {Math.min(filteredActors.length, (currentPage - 1) * itemsPerPage + 1)} - {Math.min(filteredActors.length, currentPage * itemsPerPage)}명 표시
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                    className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <Icons.ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <span className="text-xs font-semibold px-3 py-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                                    {currentPage} / {totalPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <Icons.ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* FLOATING BATCH ACTION BAR FOR MULTI-SELECT NDA SEND */}
+                    {selectedActorIds.length > 0 && (
+                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3.5 shadow-2xl flex items-center gap-4 z-40 animate-slideUp">
+                            <div className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                                배우 <span className="text-blue-500 font-mono font-extrabold text-sm">{selectedActorIds.length}</span>명 선택됨
+                            </div>
+                            <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800" />
+                            <div className="flex items-center gap-2">
+                                <label className="text-[10px] font-bold text-zinc-400 whitespace-nowrap">집행할 작품:</label>
+                                <select
+                                    value={batchNdaProject}
+                                    onChange={(e) => setBatchNdaProject(e.target.value)}
+                                    className="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                >
+                                    {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                                </select>
+                            </div>
+                            <button
+                                onClick={handleBatchNdaSendFromDatabase}
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                            >
+                                <Icons.FileText className="w-3.5 h-3.5" />
+                                선택 배우 NDA 일괄 발송
+                            </button>
+                            <button
+                                onClick={() => setSelectedActorIds([])}
+                                className="text-xs font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 px-2 py-1"
+                            >
+                                선택 해제
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+        // ==========================================
+        // SUBCOMPONENT: ActorFormModal
+        // ==========================================
+        function ActorFormModal({ actor, onClose, onSave, projects }) {
+            const isEdit = !!actor;
+            const [name, setName] = useState(isEdit ? actor.name : '');
+            const [gender, setGender] = useState(isEdit ? actor.gender : '남성');
+            const [dob, setDob] = useState(isEdit ? actor.dob : '1995-01-01');
+            const [phone, setPhone] = useState(isEdit ? actor.phone : '010-');
+            const [email, setEmail] = useState(isEdit ? actor.email : '');
+            const [sns, setSns] = useState(isEdit ? actor.sns : '@');
+            const [height, setHeight] = useState(isEdit ? actor.height : 175);
+            const [weight, setWeight] = useState(isEdit ? actor.weight : 70);
+            const [bodyType, setBodyType] = useState(isEdit ? actor.bodyType : '보통');
+            
+            const [skillsText, setSkillsText] = useState(isEdit ? actor.skills.join(', ') : '');
+            const [filmographyText, setFilmographyText] = useState(isEdit ? actor.filmography.join(', ') : '');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+
+                if (!name.trim()) return alert('이름을 입력해주세요.');
+                if (!dob) return alert('생년월일을 입력해주세요.');
+                if (!phone.trim() || phone === '010-') return alert('연락처를 입력해주세요.');
+
+                const skills = skillsText.split(',')
+                    .map(s => s.trim())
+                    .filter(s => s.length > 0);
+                
+                const filmography = filmographyText.split(',')
+                    .map(f => f.trim())
+                    .filter(f => f.length > 0);
+
+                // calculate age
+                const currentYear = new Date().getFullYear();
+                const birthYear = Number(dob.split('-')[0]) || 1995;
+                const age = currentYear - birthYear;
+
+                const savedData = {
+                    id: isEdit ? actor.id : `ACT-${String(Math.floor(Math.random() * 90000) + 10000)}`,
+                    name,
+                    gender,
+                    isMale: gender === '남성',
+                    dob,
+                    age,
+                    phone,
+                    email,
+                    sns,
+                    photoUrl: isEdit ? actor.photoUrl : `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=faces`, // default avatar
+                    height: Number(height),
+                    weight: Number(weight),
+                    bodyType,
+                    skills,
+                    filmography,
+                    collabHistory: isEdit ? actor.collabHistory : [],
+                    ndaSigned: isEdit ? actor.ndaSigned : false
+                };
+
+                onSave(savedData);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+                    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/30">
+                            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                                {isEdit ? `배우 정보 수정 [${actor.id}]` : '배우 신규 등록'}
+                            </h3>
+                            <button
+                                onClick={onClose}
+                                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
+                            >
+                                <Icons.Close className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Form */}
+                        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이름 *</label>
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        placeholder="홍길동"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">성별 *</label>
+                                    <div className="flex bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                                        <button
+                                            type="button"
+                                            onClick={() => setGender('남성')}
+                                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                                                gender === '남성'
+                                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                                                    : 'text-zinc-500'
+                                            }`}
+                                        >
+                                            남성
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setGender('여성')}
+                                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                                                gender === '여성'
+                                                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                                                    : 'text-zinc-500'
+                                            }`}
+                                        >
+                                            여성
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">생년월일 *</label>
+                                    <input
+                                        type="date"
+                                        value={dob}
+                                        onChange={(e) => setDob(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">연락처 *</label>
+                                    <input
+                                        type="text"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono"
+                                        placeholder="010-1234-5678"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">이메일 주소</label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono"
+                                        placeholder="actor@mail.com"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">SNS 계정</label>
+                                    <input
+                                        type="text"
+                                        value={sns}
+                                        onChange={(e) => setSns(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-mono"
+                                        placeholder="@instagram_handle"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">신장 (cm)</label>
+                                    <input
+                                        type="number"
+                                        value={height}
+                                        onChange={(e) => setHeight(Number(e.target.value))}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">체중 (kg)</label>
+                                    <input
+                                        type="number"
+                                        value={weight}
+                                        onChange={(e) => setWeight(Number(e.target.value))}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1.5">체형</label>
+                                    <select
+                                        value={bodyType}
+                                        onChange={(e) => setBodyType(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    >
+                                        {BODY_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 mb-1.5">특기 (쉼표로 구분)</label>
+                                <input
+                                    type="text"
+                                    value={skillsText}
+                                    onChange={(e) => setSkillsText(e.target.value)}
+                                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    placeholder="영어 회화, 경상도 사투리, 태권도"
+                                />
+                                <p className="text-[10px] text-zinc-500 mt-1">예: 경상도 사투리, 검술, 태권도 3단</p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-semibold text-zinc-500 mb-1.5">출연작 필모그래피 (쉼표로 구분)</label>
+                                <input
+                                    type="text"
+                                    value={filmographyText}
+                                    onChange={(e) => setFilmographyText(e.target.value)}
+                                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    placeholder="오징어 게임, 기생충"
+                                />
+                            </div>
+                        </form>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/30 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-4 py-2 text-xs font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors shadow-xs"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={handleSubmit}
+                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-semibold transition-colors shadow-xs"
+                            >
+                                {isEdit ? '수정 완료' : '등록'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: ActorDetailPanel
+        // ==========================================
+        function ActorDetailPanel({ 
+            isOpen, 
+            onClose, 
+            actorId, 
+            actors, 
+            setActors,
+            ndas, 
+            setNdas, 
+            revealSensitiveData, 
+            decryptedFields, 
+            projects, 
+            setProjects,
+            addLog 
+        }) {
+            const actor = useMemo(() => actors.find(a => a.id === actorId), [actors, actorId]);
+            const [selectedProject, setSelectedProject] = useState(projects[0]);
+            
+            // Check if there is already an NDA for this actor and project
+            const projectNda = useMemo(() => {
+                if (!actor) return null;
+                return ndas.find(n => n.actorId === actor.id && n.projectName === selectedProject);
+            }, [ndas, actor, selectedProject]);
+
+            if (!actor || !isOpen) return null;
+
+            const decryptedPhone = decryptedFields[`${actor.id}-phone`];
+            const decryptedEmail = decryptedFields[`${actor.id}-email`];
+
+            // Send NDA mock handler
+            const handleSendNda = () => {
+                // Check if already sent
+                if (projectNda) {
+                    return alert('이미 해당 프로젝트에 대한 NDA 계약서가 전송되었거나 서명되었습니다.');
+                }
+
+                const newNdaId = `NDA-${String(Math.floor(Math.random() * 90000) + 10000)}`;
+                const newNda = {
+                    id: newNdaId,
+                    actorId: actor.id,
+                    actorName: actor.name,
+                    projectName: selectedProject,
+                    status: 'sent',
+                    sentDate: new Date().toISOString().split('T')[0],
+                    signedDate: '',
+                    hash: ''
+                };
+
+                setNdas(prev => [newNda, ...prev]);
+                addLog('NDA 발송', `배우 [${actor.name}]에게 [${selectedProject}] 프로젝트 기밀유지서약서(NDA)를 발송했습니다.`);
+                alert(`[${actor.name}] 배우에게 이메일/SMS로 NDA 링크가 발송되었습니다.`);
+            };
+
+            // Simulate actor signs NDA
+            const handleSignNda = (ndaId) => {
+                const signatureHash = 'sha256-' + Math.random().toString(16).substring(2, 10).toUpperCase() + '...';
+                
+                // Update NDAs
+                setNdas(prev => prev.map(n => n.id === ndaId ? {
+                    ...n, 
+                    status: 'signed',
+                    signedDate: new Date().toISOString().split('T')[0],
+                    hash: signatureHash
+                } : n));
+
+                // Update actor object
+                setActors(prev => prev.map(a => a.id === actor.id ? { ...a, ndaSigned: true } : a));
+
+                addLog('NDA 체결', `배우 [${actor.name}]이 [${selectedProject}] 프로젝트 NDA에 디지털 서명하였습니다. (${signatureHash})`);
+                alert('디지털 서명이 완료되어 서약서가 기밀 문서 보관소에 안전하게 기록되었습니다.');
+            };
+
+            return (
+                <div className="absolute inset-y-0 right-0 w-full sm:w-115 bg-white dark:bg-[#0c0c0f] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col z-30 animate-slideLeft">
+                    {/* Header */}
+                    <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/30">
+                        <div>
+                            <span className="text-[10px] font-mono text-zinc-500">{actor.id}</span>
+                            <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">{actor.name} 프로필 상세</h3>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg text-zinc-500 transition-colors"
+                        >
+                            <Icons.Close className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Scrollable Body */}
+                    <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                        
+                        {/* Profile Photo and Quick Stats */}
+                        <div className="flex items-center gap-4 bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-200/60 dark:border-zinc-850">
+                            <img
+                                src={actor.photoUrl}
+                                alt={actor.name}
+                                className="w-20 h-20 rounded-xl border border-zinc-200 dark:border-zinc-850 object-cover bg-zinc-100"
+                                onError={(e) => {
+                                    e.target.src = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%232563eb'><rect width='100' height='100'/><text x='50' y='55' fill='white' font-size='30' font-family='sans-serif' text-anchor='middle'>${actor.name[0]}</text></svg>`;
+                                }}
+                            />
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-50">{actor.name}</h4>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                        {actor.gender}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-zinc-500">생년월일: {actor.dob} ({actor.age}세)</p>
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {actor.ndaSigned ? (
+                                        <span className="text-[9px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/10">
+                                            NDA 보안 통과
+                                        </span>
+                                    ) : (
+                                        <span className="text-[9px] bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 font-semibold px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+                                            NDA 보완 필요
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Physical Specs */}
+                        <div>
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2.5">신체 스펙 정보</h4>
+                            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-2.5 rounded-lg border border-zinc-200/50 dark:border-zinc-800">
+                                    <p className="text-zinc-400 text-[10px] mb-0.5">신장</p>
+                                    <p className="font-bold text-zinc-900 dark:text-zinc-50 font-mono text-sm">{actor.height} cm</p>
+                                </div>
+                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-2.5 rounded-lg border border-zinc-200/50 dark:border-zinc-800">
+                                    <p className="text-zinc-400 text-[10px] mb-0.5">체중</p>
+                                    <p className="font-bold text-zinc-900 dark:text-zinc-50 font-mono text-sm">{actor.weight} kg</p>
+                                </div>
+                                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-2.5 rounded-lg border border-zinc-200/50 dark:border-zinc-800">
+                                    <p className="text-zinc-400 text-[10px] mb-0.5">체형</p>
+                                    <p className="font-bold text-zinc-900 dark:text-zinc-50 text-xs py-0.5">{actor.bodyType}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Sensitive contact info (masking UI) */}
+                        <div className="bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-200/60 dark:border-zinc-850 space-y-3">
+                            <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-1 flex items-center gap-1.5">
+                                <Icons.Lock className="w-3.5 h-3.5 text-blue-500" />
+                                보안 마스킹 인적 사항
+                            </h4>
+                            <div className="text-xs space-y-2.5 font-mono">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-500 text-[10px]">연락처 (Mobile):</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-semibold">{decryptedPhone ? actor.phone : '010-••••-••••'}</span>
+                                        <button
+                                            onClick={() => revealSensitiveData(actor.id, 'phone')}
+                                            className="px-2 py-1 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-750 text-[10px] font-semibold rounded text-zinc-600 dark:text-zinc-300 transition-colors"
+                                        >
+                                            {decryptedPhone ? '숨김' : '해제 로그기록'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-500 text-[10px]">이메일 주소:</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-semibold">{decryptedEmail ? actor.email : '••••••••@mail.com'}</span>
+                                        <button
+                                            onClick={() => revealSensitiveData(actor.id, 'email')}
+                                            className="px-2 py-1 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-750 text-[10px] font-semibold rounded text-zinc-600 dark:text-zinc-300 transition-colors"
+                                        >
+                                            {decryptedEmail ? '숨김' : '해제 로그기록'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-500 text-[10px]">SNS 핸들:</span>
+                                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{actor.sns}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Special Skills */}
+                        <div>
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">보유 특기 (Special Skills)</h4>
+                            <div className="flex flex-wrap gap-1.5">
+                                {actor.skills.length > 0 ? actor.skills.map(skill => (
+                                    <span key={skill} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-800/40 text-xs px-2.5 py-1 rounded-lg font-semibold">
+                                        {skill}
+                                    </span>
+                                )) : <p className="text-xs text-zinc-500">등록된 특기가 없습니다.</p>}
+                            </div>
+                        </div>
+
+                        {/* Filmography */}
+                        <div>
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">기존 출연작 (Filmography)</h4>
+                            <div className="flex flex-wrap gap-1.5">
+                                {actor.filmography.length > 0 ? actor.filmography.map(film => (
+                                    <span key={film} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700">
+                                        {film}
+                                    </span>
+                                )) : <p className="text-xs text-zinc-500">지정된 출연 기록이 없습니다.</p>}
+                            </div>
+                        </div>
+
+                        {/* Agency Collaboration History */}
+                        <div>
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">본 대행사 협업 이력</h4>
+                            {actor.collabHistory.length > 0 ? (
+                                <div className="space-y-2">
+                                    {actor.collabHistory.map((collab, idx) => (
+                                        <div key={idx} className="p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs flex justify-between items-center">
+                                            <div>
+                                                <p className="font-bold text-zinc-900 dark:text-zinc-200">{collab.project}</p>
+                                                <p className="text-[10px] text-zinc-500">배정 역할: {collab.role}</p>
+                                            </div>
+                                            <span className="text-[10px] text-zinc-400 font-mono">{collab.date}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-zinc-500">아직 본 대행사 소속으로 배치된 프로젝트가 없습니다.</p>
+                            )}
+                        </div>
+
+                        {/* NDA Workflow Section */}
+                        <div className="border-t border-zinc-200 dark:border-zinc-850 pt-5 space-y-4">
+                            <div className="flex justify-between items-baseline">
+                                <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">디지털 기밀서약서(NDA) 처리</h4>
+                                <span className="text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.2 rounded border border-blue-500/20">작품별 개별 서약 집행 필수</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">배우가 새로운 작품에 배치될 때마다, 매번 독립된 NDA 서약서 발송 및 서명이 집행되어야 법적 유효성이 인정됩니다.</p>
+                            
+                            <div className="space-y-3">
+                                <div>
+                                    <div className="flex justify-between items-baseline mb-1">
+                                        <label className="block text-[10px] font-semibold text-zinc-500">적용할 신규 프로젝트 선택</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newProj = prompt("등록할 새로운 작품명을 입력하세요:");
+                                                if (newProj && newProj.trim()) {
+                                                    const trimmed = newProj.trim();
+                                                    if (projects.includes(trimmed)) {
+                                                        alert("이미 존재하는 작품명입니다.");
+                                                        return;
+                                                    }
+                                                    setProjects(prev => [...prev, trimmed]);
+                                                    setSelectedProject(trimmed);
+                                                    addLog('작품 등록', `배우 프로필 서랍에서 새 작품 [${trimmed}]을 등록했습니다.`);
+                                                    alert(`[${trimmed}] 작품이 신규 등록되어 적용 프로젝트로 선택되었습니다.`);
+                                                }
+                                            }}
+                                            className="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer"
+                                        >
+                                            + 새 작품 직접 추가
+                                        </button>
+                                    </div>
+                                    <select
+                                        value={selectedProject}
+                                        onChange={(e) => setSelectedProject(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none"
+                                    >
+                                        {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+
+                                {projectNda ? (
+                                    <div className="p-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs space-y-2.5">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-semibold text-zinc-700 dark:text-zinc-300">서약서 상태:</span>
+                                            {projectNda.status === 'signed' ? (
+                                                <span className="text-xs font-semibold px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded border border-emerald-500/20">
+                                                    서명 완료
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs font-semibold px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded border border-amber-500/20">
+                                                    링크 발송됨 (서명 대기)
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1 text-[10px] text-zinc-500 font-mono">
+                                            <p>서약서 번호: {projectNda.id}</p>
+                                            <p>발송 일자: {projectNda.sentDate}</p>
+                                            {projectNda.status === 'signed' && (
+                                                <>
+                                                    <p>서명 완료: {projectNda.signedDate}</p>
+                                                    <p className="truncate">전자서명 해시: {projectNda.hash}</p>
+                                                </>
+                                            )}
+                                        </div>
+                                        
+                                        {projectNda.status === 'sent' && (
+                                            <button
+                                                onClick={() => handleSignNda(projectNda.id)}
+                                                className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors"
+                                            >
+                                                배우 모바일 서명 시뮬레이션
+                                            </button>
+                                        )}
+                                        
+                                        {projectNda.status === 'signed' && (
+                                            <div className="flex gap-2">
+                                                <a
+                                                    href={`data:text/plain;charset=utf-8,${encodeURIComponent(`NDA AGREEMENT\nProject: ${projectNda.projectName}\nActor: ${actor.name}\nHash: ${projectNda.hash}`)}`}
+                                                    download={`NDA_${actor.name}_${projectNda.projectName}.txt`}
+                                                    className="flex-1 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-750 text-center rounded text-xs font-semibold flex items-center justify-center gap-1 transition-colors"
+                                                >
+                                                    <Icons.Download className="w-3.5 h-3.5" />
+                                                    서약서 다운로드
+                                                </a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <p className="text-[10px] text-zinc-500">배우에게 해당 프로젝트의 디지털 기밀서약서(NDA) 링크를 전송합니다.</p>
+                                        <button
+                                            onClick={handleSendNda}
+                                            className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                                        >
+                                            <Icons.FileText className="w-4 h-4" />
+                                            디지털 서약서 모바일 발송
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: NdaView (NDA Compliance Console)
+        // ==========================================
+        function NdaView({ ndas, setNdas, actors, setActors, projects, setProjects, addLog }) {
+            const [selectedProject, setSelectedProject] = useState(projects[0]);
+            
+            // Custom NDA Clauses builder
+            const [securityLevel, setSecurityLevel] = useState('Standard'); // Standard, High, Extreme
+            const [ndaTitle, setNdaTitle] = useState('기밀 정보 비밀유지 서약서 (NDA)');
+            const [customClause, setCustomClause] = useState('본 계약은 배우가 촬영 중 획득한 시나리오 내용, 캐스팅 정보, 의상 디자인, 세트장 사진을 외부나 SNS에 발설하지 않는 것을 목적으로 합니다.');
+            
+            // Multi Send lists
+            const [targetActorsSearch, setTargetActorsSearch] = useState('');
+            const [selectedActorIdsForNda, setSelectedActorIdsForNda] = useState([]);
+
+            const filteredActorsForNda = useMemo(() => {
+                if (!targetActorsSearch.trim()) return [];
+                const q = targetActorsSearch.toLowerCase().trim();
+                return actors.filter(a => 
+                    (a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)) &&
+                    !ndas.some(n => n.actorId === a.id && n.projectName === selectedProject)
+                ).slice(0, 5);
+            }, [actors, targetActorsSearch, ndas, selectedProject]);
+
+            const handleAddActorToBatch = (actor) => {
+                if (!selectedActorIdsForNda.includes(actor.id)) {
+                    setSelectedActorIdsForNda(prev => [...prev, actor.id]);
+                }
+                setTargetActorsSearch('');
+            };
+
+            const handleRemoveFromBatch = (id) => {
+                setSelectedActorIdsForNda(prev => prev.filter(x => x !== id));
+            };
+
+            // Process Batch NDA sending
+            const handleBatchSend = () => {
+                if (selectedActorIdsForNda.length === 0) {
+                    return alert('서약서를 발송할 대상 배우를 선택해 주세요.');
+                }
+
+                const newNdaRecords = selectedActorIdsForNda.map(actorId => {
+                    const actorObj = actors.find(a => a.id === actorId);
+                    return {
+                        id: `NDA-${String(Math.floor(Math.random() * 90000) + 10000)}`,
+                        actorId,
+                        actorName: actorObj?.name || '알수없음',
+                        projectName: selectedProject,
+                        status: 'sent',
+                        sentDate: new Date().toISOString().split('T')[0],
+                        signedDate: '',
+                        hash: ''
+                    };
+                });
+
+                setNdas(prev => [...newNdaRecords, ...prev]);
+                addLog('NDA 일괄 발송', `프로젝트 [${selectedProject}]에 대해 배우 ${selectedActorIdsForNda.length}명에게 NDA 서약서를 대량 전송했습니다.`);
+                alert(`선택한 ${selectedActorIdsForNda.length}명의 배우에게 NDA 동의 카카오톡 알림톡 및 이메일이 발송되었습니다.`);
+                setSelectedActorIdsForNda([]);
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">NDA 및 규정 준수 콘솔</h2>
+                        <p className="text-zinc-500 text-sm">프로젝트 맞춤형 디지털 보안 서약서(NDA) 생성, 일괄 발송 및 보관</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Left: Template Generator */}
+                        <div className="lg:col-span-5 bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-800 pb-3 flex items-center gap-2">
+                                <Icons.FileText className="w-5 h-5 text-blue-500" />
+                                1. 디지털 NDA 템플릿 맞춤 설정
+                            </h3>
+                            
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">대상 프로젝트</label>
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={selectedProject}
+                                            onChange={(e) => setSelectedProject(e.target.value)}
+                                            className="flex-1 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        >
+                                            {projects.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newProj = prompt("등록할 새로운 작품명을 입력하세요:");
+                                                if (newProj && newProj.trim()) {
+                                                    const trimmed = newProj.trim();
+                                                    if (projects.includes(trimmed)) {
+                                                        alert("이미 존재하는 작품명입니다.");
+                                                        return;
+                                                    }
+                                                    setProjects(prev => [...prev, trimmed]);
+                                                    setSelectedProject(trimmed);
+                                                    addLog('작품 등록', `NDA 콘솔에서 새 작품 [${trimmed}]을 등록했습니다.`);
+                                                    alert(`[${trimmed}] 작품이 신규 등록되어 NDA 대상 프로젝트로 선택되었습니다.`);
+                                                }
+                                            }}
+                                            className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                                            title="새 작품 직접 등록"
+                                        >
+                                            <Icons.Plus className="w-3.5 h-3.5" />
+                                            추가
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">서약서 제목</label>
+                                    <input
+                                        type="text"
+                                        value={ndaTitle}
+                                        onChange={(e) => setNdaTitle(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">기밀 정보 보안 등급 설정</label>
+                                    <div className="flex bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-800">
+                                        {['Standard', 'High', 'Extreme'].map(level => (
+                                            <button
+                                                key={level}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSecurityLevel(level);
+                                                    if(level === 'Standard') setCustomClause('본 계약은 배우가 촬영 중 획득한 시나리오 내용, 캐스팅 정보, 의상 디자인, 세트장 사진을 외부나 SNS에 발설하지 않는 것을 목적으로 합니다.');
+                                                    if(level === 'High') setCustomClause('촬영장 내부 무단 사진 촬영이 전면 금지되며, 정보 유출 발생 시 민형사상 제작사 손해배상 청구에 따라 배상해야 합니다.');
+                                                    if(level === 'Extreme') setCustomClause('시나리오 배포 불가(암호화 앱만 사용), 스마트폰 카메라 렌즈 보안스티커 부착 의무, 위반 시 즉시 하차 및 발생 손실 금액 전액 구상권 행사.');
+                                                }}
+                                                className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                                                    securityLevel === level
+                                                        ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                                                        : 'text-zinc-500'
+                                                }`}
+                                            >
+                                                {level === 'Standard' && '보통'}
+                                                {level === 'High' && '높음 (손해배상)'}
+                                                {level === 'Extreme' && '극비 (형사처벌)'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">맞춤형 추가 특별 조항</label>
+                                    <textarea
+                                        value={customClause}
+                                        onChange={(e) => setCustomClause(e.target.value)}
+                                        rows="4"
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs focus:outline-none font-sans"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Batch Sending & Recipient list */}
+                        <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-800 pb-3 flex items-center gap-2">
+                                    <Icons.Users className="w-5 h-5 text-blue-500" />
+                                    2. 수신인 일괄 발송 대상 지정
+                                </h3>
+
+                                {/* Recipient search add */}
+                                <div className="relative">
+                                    <label className="block text-xs font-semibold text-zinc-500 mb-1">배우 검색 후 수신자 추가</label>
+                                    <input
+                                        type="text"
+                                        placeholder="이름 또는 고유 코드로 배우 검색..."
+                                        value={targetActorsSearch}
+                                        onChange={(e) => setTargetActorsSearch(e.target.value)}
+                                        className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                    />
+                                    {/* Auto-suggest dropdown */}
+                                    {filteredActorsForNda.length > 0 && (
+                                        <div className="absolute left-0 right-0 mt-1 bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-lg py-1 z-30">
+                                            {filteredActorsForNda.map(a => (
+                                                <button
+                                                    key={a.id}
+                                                    onClick={() => handleAddActorToBatch(a)}
+                                                    className="w-full text-left px-4 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-between"
+                                                >
+                                                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{a.name} ({a.gender}, {a.age}세)</span>
+                                                    <span className="text-[10px] text-zinc-400 font-mono">{a.id}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Selected List display */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-semibold text-zinc-500">
+                                        발송 대기열 ({selectedActorIdsForNda.length}명)
+                                    </label>
+                                    {selectedActorIdsForNda.length > 0 ? (
+                                        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-855 rounded-lg">
+                                            {selectedActorIdsForNda.map(actorId => {
+                                                const actObj = actors.find(x => x.id === actorId);
+                                                return (
+                                                    <span
+                                                        key={actorId}
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-semibold border border-blue-150"
+                                                    >
+                                                        {actObj?.name} ({actorId})
+                                                        <button
+                                                            onClick={() => handleRemoveFromBatch(actorId)}
+                                                            className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                                                        >
+                                                            <Icons.Close className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="h-28 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-center text-xs text-zinc-400">
+                                            상기 검색 필드를 이용해 대량 발송할 배우를 대기열에 추가하십시오.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Actions block */}
+                            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/10 p-3 rounded-lg">
+                                <div className="text-[10px] text-zinc-500">
+                                    <p>• 서명 방식: 카카오톡 알림톡/LMS 원클릭 웹 서명</p>
+                                    <p>• 기밀 레벨: {securityLevel === 'Standard' ? '보통 등급' : securityLevel === 'High' ? '높음 (손해배상)' : '극비 (형사고발)'}</p>
+                                </div>
+                                <button
+                                    onClick={handleBatchSend}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-semibold transition-colors shadow-sm flex items-center gap-1.5"
+                                >
+                                    <Icons.FileText className="w-4 h-4" />
+                                    선택 배우 일괄 모바일 발송
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* NDAs Archive History Table */}
+                    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">기밀서약서(NDA) 모니터링 및 아카이브</h3>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs whitespace-nowrap">
+                                <thead className="bg-zinc-50 dark:bg-zinc-900/60 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
+                                    <tr>
+                                        <th className="px-6 py-3">서약 번호</th>
+                                        <th className="px-6 py-3">프로젝트명</th>
+                                        <th className="px-6 py-3">배우명</th>
+                                        <th className="px-6 py-3">상태</th>
+                                        <th className="px-6 py-3">발송 일자</th>
+                                        <th className="px-6 py-3">서명 완료일</th>
+                                        <th className="px-6 py-3">전자서명 인증 해시</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                                    {ndas.map(nda => (
+                                        <tr key={nda.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
+                                            <td className="px-6 py-3 font-mono font-semibold">{nda.id}</td>
+                                            <td className="px-6 py-3 font-semibold text-zinc-900 dark:text-zinc-200">{nda.projectName}</td>
+                                            <td className="px-6 py-3">{nda.actorName} ({nda.actorId})</td>
+                                            <td className="px-6 py-3">
+                                                {nda.status === 'signed' ? (
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/20">
+                                                        서명 완료
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 bg-amber-500/10 text-amber-600 rounded-full border border-amber-500/20">
+                                                        서명 대기
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-3 font-mono text-zinc-500">{nda.sentDate}</td>
+                                            <td className="px-6 py-3 font-mono text-zinc-500">{nda.signedDate || '-'}</td>
+                                            <td className="px-6 py-3 font-mono text-[10px] text-zinc-400 truncate max-w-xs">{nda.hash || '-'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: ImportView (CSV/Excel Batch Import)
+        // ==========================================
+        function ImportView({ setActors, addLog }) {
+            const [fileContent, setFileContent] = useState('');
+            const [importResult, setImportResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [isDragging, setIsDragging] = useState(false);
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = () => {
+                setIsDragging(false);
+            };
+
+            // Sample CSV content generator for demo paste
+            const sampleCsv = `이름,성별,생년월일,연락처,신장,체중,체형,특기,이메일,SNS,출연작
+김연우,여성,1998-05-12,010-4567-8901,167,49,보통,일본어 회화,yeonwu98@mail.com,@yeonwu_act,오징어 게임
+박태현,남성,1992-11-30,010-8901-2345,183,78,건장함,태권도 3단/검술,taehyun92@mail.com,@taehyun_park,범죄도시 4/베테랑
+최수아,여성,2001-02-14,010-2345-6789,162,45,마름,현대무용/발레,sua_choi01@mail.com,@sua_dance,더 글로리/무빙
+이준서,남성,1985-07-22,010-1234-8888,177,72,탄탄함,대형운전/액션,junseo85@mail.com,@junseo_lee,괴물/부산행`;
+
+            const parseCsvData = (text) => {
+                const lines = text.split('\n').filter(line => line.trim().length > 0);
+                if (lines.length < 2) {
+                    return { success: false, error: "데이터 행이 비어 있습니다." };
+                }
+
+                const headers = lines[0].split(',').map(h => h.trim());
+                const importedList = [];
+                const errors = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => v.trim());
+                    if (values.length < headers.length) {
+                        errors.push(`${i + 1}번 행: 데이터 열이 헤더 크기보다 모자랍니다.`);
+                        continue;
+                    }
+
+                    // Field Mapping
+                    const rowData = {};
+                    headers.forEach((header, index) => {
+                        rowData[header] = values[index];
+                    });
+
+                    // Validations
+                    if (!rowData['이름']) { errors.push(`${i + 1}번 행: [이름] 필드가 누락되었습니다.`); continue; }
+                    if (!rowData['생년월일']) { errors.push(`${i + 1}번 행: [생년월일] 필드가 누락되었습니다.`); continue; }
+                    if (!rowData['연락처']) { errors.push(`${i + 1}번 행: [연락처] 필드가 누락되었습니다.`); continue; }
+
+                    const parsedHeight = Number(rowData['신장']) || 170;
+                    const parsedWeight = Number(rowData['체중']) || 65;
+                    
+                    const age = new Date().getFullYear() - (Number(rowData['생년월일'].split('-')[0]) || 1995);
+
+                    importedList.push({
+                        id: `ACT-${String(Math.floor(Math.random() * 90000) + 10000)}`,
+                        name: rowData['이름'],
+                        gender: rowData['성별'] || '남성',
+                        isMale: rowData['성별'] !== '여성',
+                        dob: rowData['생년월일'],
+                        age,
+                        phone: rowData['연락처'],
+                        email: rowData['이메일'] || '',
+                        sns: rowData['SNS'] || '',
+                        photoUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=faces`, // default avatar
+                        height: parsedHeight,
+                        weight: parsedWeight,
+                        bodyType: rowData['체형'] || '보통',
+                        skills: rowData['특기'] ? rowData['특기'].split('/') : [],
+                        filmography: rowData['출연작'] ? rowData['출연작'].split('/') : [],
+                        collabHistory: [],
+                        ndaSigned: false
+                    });
+                }
+
+                return { success: true, list: importedList, errors };
+            };
+
+            const triggerImport = () => {
+                if (!fileContent.trim()) {
+                    return alert('가져올 CSV 데이터를 텍스트 상자에 입력하거나 파일 내용을 확인해 주세요.');
+                }
+
+                setLoading(true);
+                setTimeout(() => {
+                    const parsed = parseCsvData(fileContent);
+                    setLoading(false);
+                    if (parsed.success) {
+                        setActors(prev => [...parsed.list, ...prev]);
+                        setImportResult({
+                            count: parsed.list.length,
+                            errors: parsed.errors
+                        });
+                        addLog('일괄 등록 (CSV)', `CSV 파싱을 통하여 신규 배우 ${parsed.list.length}명을 데이터베이스에 일괄 적재했습니다.`);
+                        alert(`일괄 등록 성공: ${parsed.list.length}명의 배우 프로필이 등록되었습니다.`);
+                    } else {
+                        alert(`에러: ${parsed.error}`);
+                    }
+                }, 1000); // simulated loading animation
+            };
+
+            const handleFileDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        setFileContent(evt.target.result);
+                        addLog('파일 읽기', `업로드된 로컬 CSV 파일 [${file.name}] 로딩 성공`);
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">CSV/Excel 배우 데이터 일괄 가져오기</h2>
+                        <p className="text-zinc-500 text-sm">기존 에이전시 관리 대장(엑셀 또는 CSV)을 웹 데이터베이스로 신속히 병합합니다.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Input Area */}
+                        <div className="lg:col-span-7 bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">CSV 텍스트 입력 및 파일 드롭</h3>
+                            
+                            <div 
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleFileDrop}
+                                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center text-center transition-all ${
+                                    isDragging 
+                                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-950/20' 
+                                        : 'border-zinc-200 dark:border-zinc-850 bg-zinc-50/50 dark:bg-zinc-900/20'
+                                }`}
+                            >
+                                <Icons.Upload className="w-10 h-10 text-zinc-400 mb-3" />
+                                <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">CSV 파일을 여기에 끌어다 놓으세요.</p>
+                                <p className="text-[10px] text-zinc-500 mt-1">또는 아래 텍스트 영역에 복사하여 붙여넣으십시오.</p>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-semibold text-zinc-500">CSV 데이터 입력</label>
+                                <textarea
+                                    value={fileContent}
+                                    onChange={(e) => setFileContent(e.target.value)}
+                                    rows="10"
+                                    placeholder="여기에 CSV 데이터를 입력하거나 파일을 업로드 하세요..."
+                                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-3 text-xs font-mono focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="flex justify-between items-center pt-2">
+                                <button
+                                    onClick={() => setFileContent(sampleCsv)}
+                                    className="text-xs font-semibold text-blue-500 hover:text-blue-600 hover:underline"
+                                >
+                                    임포트 테스트용 샘플 CSV 양식 붙여넣기
+                                </button>
+                                <button
+                                    onClick={triggerImport}
+                                    disabled={loading}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 text-xs font-semibold transition-all shadow-sm flex items-center gap-2 disabled:opacity-55"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            일괄 업로드 처리 중...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Icons.Upload className="w-4 h-4" />
+                                            가져오기 실행
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Format guide and statistics */}
+                        <div className="lg:col-span-5 space-y-6">
+                            <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4">
+                                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">CSV 데이터 서식 가이드</h3>
+                                <div className="text-xs space-y-2.5 text-zinc-600 dark:text-zinc-400">
+                                    <p>데이터 유효성 검사 규칙 및 권장 구성입니다.</p>
+                                    <div className="p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 rounded-lg font-mono text-[10px] space-y-1">
+                                        <p>• 필수: 이름, 생년월일(YYYY-MM-DD), 연락처</p>
+                                        <p>• 다중 값 입력: 슬래시(/) 문자열 구분 (예: 태권도/영어회화)</p>
+                                        <p>• 헤더 형식: 이름,성별,생년월일,연락처,신장,체중,체형,특기,이메일,SNS,출연작</p>
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500">
+                                        ※ 중복 검사는 고유 성명 및 생년월일을 매칭하여 자동 수행됩니다.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {importResult && (
+                                <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm space-y-4 animate-fadeIn">
+                                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                                        <Icons.CheckCircle className="w-5 h-5" />
+                                        업로드 처리 리포트
+                                    </h3>
+                                    <div className="text-xs space-y-2">
+                                        <p>• 정상 적재 완료: <span className="font-bold font-mono text-zinc-900 dark:text-zinc-50">{importResult.count}명</span></p>
+                                        <p>• 경고/오류 메시지: {importResult.errors.length}건</p>
+                                        
+                                        {importResult.errors.length > 0 && (
+                                            <div className="max-h-36 overflow-y-auto p-2 bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-lg text-[10px] space-y-1 font-mono">
+                                                {importResult.errors.map((err, idx) => <p key={idx}>{err}</p>)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // SUBCOMPONENT: SecurityView (Access audit log)
+        // ==========================================
+        function SecurityView({ logs, addLog }) {
+            const clearLogs = () => {
+                if (confirm('보안 감사 로그 이력을 전체 삭제하시겠습니까? (이 동작은 되돌릴 수 없습니다.)')) {
+                    addLog('감사 삭제', '과거 보안 감사 로그 이력의 아카이빙을 소거했습니다.');
+                    alert('로그가 초기화되었습니다.');
+                }
+            };
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">보안 통제 및 감사 로그</h2>
+                            <p className="text-zinc-500 text-sm">개인정보 조회 기록 및 NDA 기밀 서약 인증 이력 모니터링</p>
+                        </div>
+                        <button
+                            onClick={clearLogs}
+                            className="bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 rounded-lg px-4 py-2 text-xs font-semibold transition-colors shadow-xs"
+                        >
+                            로그 초기화
+                        </button>
+                    </div>
+
+                    {/* Infrastructure security overview */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">데이터 암호화 채널</h4>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+                                <span className="text-sm font-semibold">AES-256 개인정보 암호화</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">배우의 주민등록번호대신 사용하는 생년월일, 연락처는 가상 메모리 암호화 보호 장치가 켜진 상태입니다.</p>
+                        </div>
+                        
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">접속 권한(RBAC)</h4>
+                            <div className="flex items-center gap-2">
+                                <span className="p-1 bg-blue-500/10 text-blue-500 rounded text-xs font-bold font-mono">ROLE_MASTER</span>
+                                <span className="text-xs text-zinc-500">최고 권한 관리자</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">현재 클라이언트 계정은 배우 정보의 CRUD 및 마스킹 해제 로그를 볼 수 있는 Master Role 권한자입니다.</p>
+                        </div>
+
+                        <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 shadow-sm space-y-2">
+                            <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">전자서명 보안 등급</h4>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">SHA-256 인증 토큰 발급</span>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">서명된 NDA 계약은 브라우저 세션 및 모바일 기기 고유 해시값을 조합해 위조가 원천 봉쇄된 키값 형태로 서명 완료 처리됩니다.</p>
+                        </div>
+                    </div>
+
+                    {/* Logs listing */}
+                    <div className="bg-white dark:bg-[#0c0c0f] border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/30">
+                            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">실시간 보안 감사 로그 기록 (감사 추적)</h3>
+                        </div>
+                        
+                        <div className="overflow-y-auto max-h-[500px]">
+                            <table className="w-full text-left text-xs whitespace-nowrap">
+                                <thead className="bg-zinc-50 dark:bg-zinc-900/60 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800 sticky top-0">
+                                    <tr>
+                                        <th className="px-6 py-3">접근 일각</th>
+                                        <th className="px-6 py-3">수행 사용자</th>
+                                        <th className="px-6 py-3">분류</th>
+                                        <th className="px-6 py-3">수행 행위 및 타겟</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80 font-mono">
+                                    {logs.map(log => (
+                                        <tr key={log.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
+                                            <td className="px-6 py-3 text-zinc-500">{log.time}</td>
+                                            <td className="px-6 py-3 font-semibold text-zinc-900 dark:text-zinc-300">{log.user}</td>
+                                            <td className="px-6 py-3">
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
+                                                    log.type === '개인정보 접근' 
+                                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400' 
+                                                        : log.type === 'NDA 체결' || log.type === '배우 등록'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                        : 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                                                }`}>
+                                                    {log.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-3 text-zinc-700 dark:text-zinc-400 whitespace-normal">{log.desc}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Mount the application
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
